@@ -27,6 +27,7 @@
 		<srp>0.7</srp>
 		<jredis>06052013</jredis>
 		<multithreadedtc>1.01</multithreadedtc>
+		<source.level>1.8</source.level>
 	</properties>
 
 	<dependencyManagement>

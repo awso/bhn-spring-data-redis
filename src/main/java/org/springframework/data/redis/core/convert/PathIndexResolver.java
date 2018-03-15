@@ -16,6 +16,7 @@
 package org.springframework.data.redis.core.convert;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -55,7 +56,9 @@ import org.springframework.util.CollectionUtils;
  */
 public class PathIndexResolver implements IndexResolver {
 
-	private final Set<Class<?>> VALUE_TYPES = new HashSet<Class<?>>(
+	private static final String TOP_LEVEL_PATH = "";
+
+    private final Set<Class<?>> VALUE_TYPES = new HashSet<Class<?>>(
 			Arrays.<Class<?>> asList(Point.class, GeoLocation.class));
 
 	private ConfigurableIndexDefinitionProvider indexConfiguration;
@@ -118,7 +121,10 @@ public class PathIndexResolver implements IndexResolver {
 
 		final PersistentPropertyAccessor accessor = entity.getPropertyAccessor(value);
 		final Set<IndexedData> indexes = new LinkedHashSet<IndexedData>();
-
+		
+		// customized code for top level index
+		indexes.addAll(resolveCompositeIndexes(keyspace, path, typeInformation, value));
+		
 		entity.doWithProperties(new PropertyHandler<KeyValuePersistentProperty>() {
 
 			@Override
@@ -197,7 +203,33 @@ public class PathIndexResolver implements IndexResolver {
 		return indexes;
 	}
 
-	protected Set<IndexedData> resolveIndex(String keyspace, String propertyPath, PersistentProperty<?> property,
+	private Collection<? extends IndexedData> resolveCompositeIndexes(String keyspace, String path, TypeInformation<?> typeInformation, Object value) {
+	    Set<IndexedData> data = new LinkedHashSet<IndexedData>();
+        if(indexConfiguration.hasIndexFor(keyspace, path)){
+            IndexingContext context = new IndexingContext(keyspace, path,
+                    typeInformation);
+
+            for (IndexDefinition indexDefinition : indexConfiguration.getIndexDefinitionsFor(keyspace, path)) {
+
+                if (!verifyConditions(indexDefinition.getConditions(), value, context)) {
+                    continue;
+                }
+
+                Object transformedValue = indexDefinition.valueTransformer().convert(value);
+
+                IndexedData indexedData = null;
+                if (transformedValue == null) {
+                    indexedData = new RemoveIndexedData(indexedData);
+                } else {
+                    indexedData = indexedDataFactoryProvider.getIndexedDataFactory(indexDefinition).createIndexedDataFor(value);
+                }
+                data.add(indexedData);
+            }
+        }
+        return data;
+    }
+
+    protected Set<IndexedData> resolveIndex(String keyspace, String propertyPath, PersistentProperty<?> property,
 			Object value) {
 
 		String path = normalizeIndexPath(propertyPath, property);

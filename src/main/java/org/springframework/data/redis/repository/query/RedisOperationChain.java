@@ -24,6 +24,7 @@ import java.util.Set;
 
 import org.springframework.data.geo.Distance;
 import org.springframework.data.geo.Point;
+import org.springframework.data.redis.connection.RedisZSetCommands.Range;
 import org.springframework.util.ObjectUtils;
 
 /**
@@ -35,10 +36,19 @@ import org.springframework.util.ObjectUtils;
 public class RedisOperationChain {
 
 	private Set<PathAndValue> sismember = new LinkedHashSet<PathAndValue>();
-	private Set<PathAndValue> orSismember = new LinkedHashSet<PathAndValue>();
+	private Set<Set<PathAndValue>> orSismember = new LinkedHashSet<>();
 	private NearPath near;
+	private Set<PathAndValue> ranges = new LinkedHashSet<PathAndValue>();
+	
+	public void ranges(String path, Range range){
+	    ranges.add(new PathAndValue(path, range));
+	}
 
-	public void sismember(String path, Object value) {
+	public Set<PathAndValue> getRanges(){
+	    return ranges;
+	}
+
+    public void sismember(String path, Object value) {
 		sismember(new PathAndValue(path, value));
 	}
 
@@ -55,14 +65,16 @@ public class RedisOperationChain {
 	}
 
 	public void orSismember(PathAndValue pathAndValue) {
-		orSismember.add(pathAndValue);
+	    Set<PathAndValue> set = new LinkedHashSet<PathAndValue>();
+	    set.add(pathAndValue);
+		orSismember.add(set);
 	}
 
 	public void orSismember(Collection<PathAndValue> next) {
-		orSismember.addAll(next);
+		orSismember.add((Set<PathAndValue>) next);
 	}
 
-	public Set<PathAndValue> getOrSismember() {
+	public Set<Set<PathAndValue>> getOrSismember() {
 		return orSismember;
 	}
 
@@ -162,4 +174,15 @@ public class RedisOperationChain {
 			return (Distance) it.next();
 		}
 	}
+	
+//	public static class Range extends PathAndValue{
+//	    public double min = Double.MIN_VALUE;
+//	    public double max = Double.MAX_VALUE;
+//
+//        public Range(String path, Object singleValue) {
+//            super(path, singleValue);
+//            // TODO Auto-generated constructor stub
+//        }
+//	    
+//	}
 }

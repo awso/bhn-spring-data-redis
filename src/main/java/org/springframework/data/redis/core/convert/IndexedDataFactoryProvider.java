@@ -15,10 +15,15 @@
  */
 package org.springframework.data.redis.core.convert;
 
+import java.util.Date;
+
 import org.springframework.data.geo.Point;
+import org.springframework.data.redis.core.index.CompositeSortingIndexDefinition;
 import org.springframework.data.redis.core.index.GeoIndexDefinition;
 import org.springframework.data.redis.core.index.IndexDefinition;
+import org.springframework.data.redis.core.index.PurgingIndexDefinition;
 import org.springframework.data.redis.core.index.SimpleIndexDefinition;
+import org.springframework.data.redis.core.index.SortingIndexDefinition;
 
 /**
  * @author Christoph Strobl
@@ -36,12 +41,51 @@ class IndexedDataFactoryProvider {
 			return new SimpleIndexedPropertyValueFactory((SimpleIndexDefinition) definition);
 		} else if (definition instanceof GeoIndexDefinition) {
 			return new GeoIndexedPropertyValueFactory(((GeoIndexDefinition) definition));
-		}
+		} else if (definition instanceof SortingIndexDefinition){
+		    return new SortingIndexedPropertyValueFactory(((SortingIndexDefinition) definition));
+		} 
 		return null;
 	}
 
 	static interface IndexedDataFactory {
 		IndexedData createIndexedDataFor(Object value);
+	}
+	
+	static class SortingIndexedPropertyValueFactory implements IndexedDataFactory{
+	    final SortingIndexDefinition indexDefinition;
+
+        public SortingIndexedPropertyValueFactory(SortingIndexDefinition indexDefinition) {
+            this.indexDefinition = indexDefinition;
+        }
+
+        @Override
+        public IndexedData createIndexedDataFor(Object value) {
+            if(indexDefinition instanceof PurgingIndexDefinition){
+                return new SortingIndexedPropertyValue(indexDefinition.getKeyspace(), ((PurgingIndexDefinition)indexDefinition).getIndexName(value),
+                        indexDefinition.valueTransformer().convert(new Date()));
+            } else if (indexDefinition instanceof CompositeSortingIndexDefinition){
+                CompositeSortingIndexDefinition csid = (CompositeSortingIndexDefinition) indexDefinition;
+                return new SortingIndexedPropertyValue(indexDefinition.getKeyspace(), csid.getIndexName(value),
+                        csid.getIndexValue(value));
+            } else{
+                return new SortingIndexedPropertyValue(indexDefinition.getKeyspace(), indexDefinition.getIndexName(),
+                    indexDefinition.valueTransformer().convert(value));
+            }
+        }
+	    
+	}
+	
+	static class CompoisteSortingIndexedPropertyValueFacotry implements IndexedDataFactory{
+	    final CompositeSortingIndexDefinition indexDefinition;
+	    public CompoisteSortingIndexedPropertyValueFacotry(CompositeSortingIndexDefinition indexDefinition){
+	        this.indexDefinition = indexDefinition;
+        }
+
+        @Override
+        public IndexedData createIndexedDataFor(Object value) {
+            return new SortingIndexedPropertyValue(indexDefinition.getKeyspace(), indexDefinition.getIndexName(value),
+                    indexDefinition.getIndexValue(value));
+        }
 	}
 
 	/**
