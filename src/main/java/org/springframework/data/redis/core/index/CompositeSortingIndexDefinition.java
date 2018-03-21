@@ -5,7 +5,7 @@ public class CompositeSortingIndexDefinition<T> extends SortingIndexDefinition {
     public IndexValueHandler<T> indexValueHandler;
 
     public CompositeSortingIndexDefinition(String keyspace, String path, IndexNameHandler<T> indexNameHandler, IndexValueHandler<T> indexValueHandler){
-        super(keyspace, path, indexNameHandler.getIndexNamePlaceHolder());
+        super(keyspace, path, path);
         this.indexNameHandler = indexNameHandler;
         this.indexValueHandler = indexValueHandler;
     }

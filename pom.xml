@@ -316,4 +316,10 @@
 			<url>https://repo.spring.io/plugins-release</url>
 		</pluginRepository>
 	</pluginRepositories>
+
+    <scm>
+        <connection>scm:git:ssh://git@git.blackhawknetwork.com:7999/sa/spring-data-redis.git</connection>
+        <developerConnection>scm:git:ssh://git@git.blackhawknetwork.com:7999/sa/spring-data-redis.git</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
 </project>

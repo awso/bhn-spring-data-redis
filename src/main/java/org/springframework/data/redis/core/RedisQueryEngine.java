@@ -99,32 +99,11 @@ class RedisQueryEngine extends QueryEngine<RedisKeyValueAdapter, RedisOperationC
 
 				List<byte[]> allKeys = new ArrayList<byte[]>();
 				if (!criteria.getSismember().isEmpty()) {
-//					allKeys.addAll(connection.sInter(keys(keyspace + ":", criteria.getSismember())));
 				    allKeys.addAll(getKeysFromIsMembers(connection, keyspace + ":", criteria.getSismember()));
 				}
 				
-//				if (!criteria.getRanges().isEmpty()){
-//				    //query keys in sorted set
-//				    String prefix = keyspace + ":";
-//				    Set<byte[]> intersections = null;
-//		            for (PathAndValue pathAndValue : criteria.getRanges()) {
-//		                byte[] keyInByte = getAdapter().getConverter().getConversionService()
-//		                        .convert(prefix + pathAndValue.getPath(), byte[].class);
-//		                Set<byte[]> zRangeByScore = connection.zRangeByScore(keyInByte, (Range) pathAndValue.getFirstValue());
-//		                if(intersections == null){
-//		                    intersections = new HashSet<byte[]>();
-//		                    intersections.addAll(zRangeByScore);
-//		                }else{
-//		                    intersections.retainAll(zRangeByScore);
-//		                }
-//		            }
-//		            if(!intersections.isEmpty()){
-//		                allKeys.addAll(intersections);
-//		            }
-//				}
 
 				if (!criteria.getOrSismember().isEmpty()) {
-//					allKeys.addAll(connection.sUnion(keys(keyspace + ":", criteria.getOrSismember())));
 				    allKeys.addAll(getKeysFromOrMembers(connection, keyspace + ":", criteria.getOrSismember()));
 				}
 
