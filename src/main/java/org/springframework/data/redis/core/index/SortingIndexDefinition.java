@@ -1,5 +1,6 @@
 package org.springframework.data.redis.core.index;
 
+import java.math.BigDecimal;
 import java.util.Date;
 
 public class SortingIndexDefinition extends RedisIndexDefinition 
@@ -25,8 +26,16 @@ implements PathBasedRedisIndexDefinition
             }else if(source instanceof Integer){
                 Integer integer = (Integer) source;
                 return (double) integer.intValue();
+            }else if(source instanceof Long){
+                Long l = (Long) source;
+                return (double)l.doubleValue();
+            }else if(source instanceof BigDecimal){
+                BigDecimal bd = (BigDecimal) source;
+                return bd.toBigInteger().doubleValue();
+            }else if(source instanceof Double){
+                return (Double) source;
             }else{
-                return 0d;
+                return null;
             }
         }
         

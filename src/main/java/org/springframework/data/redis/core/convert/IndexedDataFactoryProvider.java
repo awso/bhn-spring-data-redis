@@ -21,7 +21,6 @@ import org.springframework.data.geo.Point;
 import org.springframework.data.redis.core.index.CompositeSortingIndexDefinition;
 import org.springframework.data.redis.core.index.GeoIndexDefinition;
 import org.springframework.data.redis.core.index.IndexDefinition;
-import org.springframework.data.redis.core.index.PurgingIndexDefinition;
 import org.springframework.data.redis.core.index.SimpleIndexDefinition;
 import org.springframework.data.redis.core.index.SortingIndexDefinition;
 
@@ -60,34 +59,18 @@ class IndexedDataFactoryProvider {
 
         @Override
         public IndexedData createIndexedDataFor(Object value) {
-            if(indexDefinition instanceof PurgingIndexDefinition){
-                return new SortingIndexedPropertyValue(indexDefinition.getKeyspace(), ((PurgingIndexDefinition)indexDefinition).getIndexName(value),
-                        indexDefinition.valueTransformer().convert(new Date()));
-            } else if (indexDefinition instanceof CompositeSortingIndexDefinition){
+            if (indexDefinition instanceof CompositeSortingIndexDefinition){
                 CompositeSortingIndexDefinition csid = (CompositeSortingIndexDefinition) indexDefinition;
                 return new SortingIndexedPropertyValue(indexDefinition.getKeyspace(), csid.getIndexName(value),
                         csid.getIndexValue(value));
             } else{
                 return new SortingIndexedPropertyValue(indexDefinition.getKeyspace(), indexDefinition.getIndexName(),
-                    indexDefinition.valueTransformer().convert(value));
+                        indexDefinition.valueTransformer().convert(value));
             }
         }
 	    
 	}
 	
-	static class CompoisteSortingIndexedPropertyValueFacotry implements IndexedDataFactory{
-	    final CompositeSortingIndexDefinition indexDefinition;
-	    public CompoisteSortingIndexedPropertyValueFacotry(CompositeSortingIndexDefinition indexDefinition){
-	        this.indexDefinition = indexDefinition;
-        }
-
-        @Override
-        public IndexedData createIndexedDataFor(Object value) {
-            return new SortingIndexedPropertyValue(indexDefinition.getKeyspace(), indexDefinition.getIndexName(value),
-                    indexDefinition.getIndexValue(value));
-        }
-	}
-
 	/**
 	 * @author Christoph Strobl
 	 * @since 1.8

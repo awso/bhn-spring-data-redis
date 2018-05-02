@@ -225,8 +225,13 @@ class IndexWriter {
 			connection.sAdd(ByteUtils.concatAll(toBytes(indexedData.getKeyspace() + ":"), key, toBytes(":idx")), indexKey);
 		} else if(indexedData instanceof SortingIndexedPropertyValue ) {
             SortingIndexedPropertyValue sortingIndexedData = (SortingIndexedPropertyValue) indexedData;
-            byte[] indexKey = toBytes(indexedData.getKeyspace() + ":" + sortingIndexedData.getIndexName());
-            connection.zAdd(indexKey , sortingIndexedData.getScore(), key);
+            String indexName = sortingIndexedData.getIndexName();
+            if(indexName == null) return;
+            Double score = sortingIndexedData.getScore();
+            if(score == null) return;
+            
+            byte[] indexKey = toBytes(indexedData.getKeyspace() + ":" + indexName);
+            connection.zAdd(indexKey , score, key);
             
             // keep track of indexes used for the object
             connection.sAdd(ByteUtils.concatAll(toBytes(indexedData.getKeyspace() + ":"), key, toBytes(":idx")), indexKey);
