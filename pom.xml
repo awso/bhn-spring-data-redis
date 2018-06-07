@@ -316,6 +316,23 @@
 			<url>https://repo.spring.io/plugins-release</url>
 		</pluginRepository>
 	</pluginRepositories>
+ 
+   <distributionManagement>
+    <repository>
+      <id>central</id>
+      <name>Blackhawk Central Releases Repo</name>
+      <url>https://artifacts.blackhawknetwork.com/artifactory/ext-release-local</url>
+    </repository>
+    <snapshotRepository>
+      <id>snapshots</id>
+      <name>Blackhawk Central Snapshots Repo</name>
+      <url>https://artifacts.blackhawknetwork.com/artifactory/ext-snapshot-local</url>
+    </snapshotRepository>
+    <site>
+      <id>bhn-sites</id>
+      <url>file:/var/www/org/springframework/data/spring-data-redis</url>
+    </site>
+  </distributionManagement>
 
     <scm>
         <connection>scm:git:ssh://git@git.blackhawknetwork.com:7999/sa/spring-data-redis.git</connection>
