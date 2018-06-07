@@ -122,9 +122,6 @@ public class PathIndexResolver implements IndexResolver {
 		final PersistentPropertyAccessor accessor = entity.getPropertyAccessor(value);
 		final Set<IndexedData> indexes = new LinkedHashSet<IndexedData>();
 		
-		// customized code for top level index
-		indexes.addAll(resolveCompositeIndexes(keyspace, path, typeInformation, value));
-		
 		entity.doWithProperties(new PropertyHandler<KeyValuePersistentProperty>() {
 
 			@Override
@@ -183,6 +180,9 @@ public class PathIndexResolver implements IndexResolver {
 					}
 				}
 
+				// intentionally move this to the end of the function so that the complex index will be created at the end of indexing
+				// customized code for top level index
+		        indexes.addAll(resolveCompositeIndexes(keyspace, path, typeInformation, value));
 			}
 
 			private TypeInformation<?> updateTypeHintForActualValue(TypeInformation<?> typeHint, Object propertyValue) {
