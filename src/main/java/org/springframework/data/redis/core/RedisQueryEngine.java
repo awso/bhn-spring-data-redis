@@ -17,12 +17,16 @@ package org.springframework.data.redis.core;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.geo.Circle;
@@ -34,6 +38,7 @@ import org.springframework.data.keyvalue.core.SortAccessor;
 import org.springframework.data.keyvalue.core.query.KeyValueQuery;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisGeoCommands.GeoLocation;
+import org.springframework.data.redis.connection.RedisZSetCommands.Range;
 import org.springframework.data.redis.core.convert.GeoIndexedPropertyValue;
 import org.springframework.data.redis.core.convert.RedisData;
 import org.springframework.data.redis.repository.query.RedisOperationChain;
@@ -80,7 +85,9 @@ class RedisQueryEngine extends QueryEngine<RedisKeyValueAdapter, RedisOperationC
 			final int rows, final Serializable keyspace, Class<T> type) {
 
 		if (criteria == null
-				|| (CollectionUtils.isEmpty(criteria.getOrSismember()) && CollectionUtils.isEmpty(criteria.getSismember()))
+				|| (CollectionUtils.isEmpty(criteria.getOrSismember())
+				        && CollectionUtils.isEmpty(criteria.getSismember())
+				        && CollectionUtils.isEmpty(criteria.getRanges()))
 						&& criteria.getNear() == null) {
 			return (Collection<T>) getAdapter().getAllOf(keyspace, offset, rows);
 		}
@@ -92,11 +99,12 @@ class RedisQueryEngine extends QueryEngine<RedisKeyValueAdapter, RedisOperationC
 
 				List<byte[]> allKeys = new ArrayList<byte[]>();
 				if (!criteria.getSismember().isEmpty()) {
-					allKeys.addAll(connection.sInter(keys(keyspace + ":", criteria.getSismember())));
+				    allKeys.addAll(getKeysFromIsMembers(connection, keyspace + ":", criteria.getSismember()));
 				}
+				
 
 				if (!criteria.getOrSismember().isEmpty()) {
-					allKeys.addAll(connection.sUnion(keys(keyspace + ":", criteria.getOrSismember())));
+				    allKeys.addAll(getKeysFromOrMembers(connection, keyspace + ":", criteria.getOrSismember()));
 				}
 
 				if (criteria.getNear() != null) {
@@ -129,6 +137,114 @@ class RedisQueryEngine extends QueryEngine<RedisKeyValueAdapter, RedisOperationC
 				return rawData;
 
 			}
+
+            private Collection<? extends byte[]> getKeysFromIsMembers(RedisConnection connection, String prefix, Set<PathAndValue> members) {
+                //get simple types
+                Set<PathAndValue> simpleQueries = new HashSet<PathAndValue>();
+                //get range types
+                Set<PathAndValue> rangeQueries = new HashSet<PathAndValue>();
+                for(PathAndValue curr : members){
+                    if(curr.getFirstValue() instanceof Range){
+                        rangeQueries.add(curr);
+                    }else{
+                        simpleQueries.add(curr);
+                    }
+                }
+                Set<byte[]> sInter = new HashSet<byte[]>();
+                if(!simpleQueries.isEmpty()){
+                    sInter = connection.sInter(keys(prefix, simpleQueries));
+                }
+                
+                if(!simpleQueries.isEmpty() && sInter.isEmpty()){
+                    //nothing find in simple queries.  no need of further checks.
+                    //just return the empty set
+                    return sInter;
+                }
+                
+                for (PathAndValue pathAndValue : rangeQueries) {
+                    byte[] keyInByte = getAdapter().getConverter().getConversionService()
+                          .convert(prefix + pathAndValue.getPath(), byte[].class);
+                    Set<byte[]> zRangeByScore = connection.zRangeByScore(keyInByte, (Range) pathAndValue.getFirstValue());
+                    if(sInter.isEmpty()){
+                        //no simple query but range query only. 
+                        sInter.addAll(zRangeByScore);
+                    }else{
+                      //remain intersections only
+                      Iterator<byte[]> it = sInter.iterator();
+                      while (it.hasNext()) {
+                          Iterator<byte[]> itTarget = zRangeByScore.iterator();
+                          byte[] source = it.next();
+                          boolean isContained = false;
+                          while(itTarget.hasNext()){
+                              byte[] target = itTarget.next();
+                              if (Arrays.equals(source, target)) {
+                                  isContained = true;
+                                  break;
+                                }
+                            }
+                            if(!isContained){
+                                it.remove();
+                            }
+                        }
+                    }
+                }
+                
+                return sInter;
+            }
+            
+            private Collection<? extends byte[]> getKeysFromOrMembers(RedisConnection connection, String prefix, Set<Set<PathAndValue>> members) {
+                Set<byte[]> sUnion = new HashSet<byte[]>();
+                for(Set<PathAndValue> isMemberSet : members){
+                    Collection<? extends byte[]> keysFromIsMembers = getKeysFromIsMembers(connection, prefix, isMemberSet);
+                    if(sUnion.isEmpty()){
+                        sUnion.addAll(keysFromIsMembers);
+                    }else{
+                        //merge
+                        Iterator<byte[]> it = (Iterator<byte[]>) keysFromIsMembers.iterator();
+                        while (it.hasNext()) {
+                            Iterator<byte[]> itTarget = (Iterator<byte[]>) sUnion.iterator();
+                            byte[] source = it.next();
+                            boolean isContained = false;
+                            while(itTarget.hasNext()){
+                                byte[] target = itTarget.next();
+                                if (Arrays.equals(source, target)) {
+                                    isContained = true;
+                                    break;
+                                }
+                            }
+                            if(!isContained){
+                                sUnion.add(source);
+                            }
+                        }
+                    }
+                }
+//                //get simple types
+//                Set<PathAndValue> simpleQueries = new HashSet<PathAndValue>();
+//                //get range types
+//                Set<PathAndValue> rangeQueries = new HashSet<PathAndValue>();
+//                
+//                for(PathAndValue curr : members){
+//                    if(curr.getFirstValue() instanceof Range){
+//                        rangeQueries.add(curr);
+//                    }else{
+//                        simpleQueries.add(curr);
+//                    }
+//                }
+//                
+//                Set<byte[]> sUnion = new HashSet<byte[]>();
+//                if(!simpleQueries.isEmpty()){
+//                    sUnion = connection.sUnion(keys(prefix, simpleQueries));
+//                }
+//                
+//                for (PathAndValue pathAndValue : rangeQueries) {
+//                    byte[] keyInByte = getAdapter().getConverter().getConversionService()
+//                          .convert(prefix + pathAndValue.getPath(), byte[].class);
+//                    Set<byte[]> zRangeByScore = connection.zRangeByScore(keyInByte, (Range) pathAndValue.getFirstValue());
+//                      sUnion.addAll(zRangeByScore);
+//                }
+                
+                return sUnion;
+            }
 		};
 
 		Map<byte[], Map<byte[], byte[]>> raw = this.getAdapter().execute(callback);
@@ -210,7 +326,7 @@ class RedisQueryEngine extends QueryEngine<RedisKeyValueAdapter, RedisOperationC
 		return getAdapter().getConverter().getConversionService().convert(prefix + path, byte[].class);
 
 	}
-
+	
 	/**
 	 * @author Christoph Strobl
 	 * @since 1.7

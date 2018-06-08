@@ -22,6 +22,8 @@ import static org.hamcrest.core.IsNull.*;
 import static org.junit.Assert.*;
 
 import java.lang.reflect.Method;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -89,8 +91,12 @@ public class RedisQueryCreatorUnitTests {
 		KeyValueQuery<RedisOperationChain> query = creator.createQuery();
 
 		assertThat(query.getCriteria().getOrSismember(), hasSize(2));
-		assertThat(query.getCriteria().getOrSismember(), hasItem(new PathAndValue("age", 43)));
-		assertThat(query.getCriteria().getOrSismember(), hasItem(new PathAndValue("firstname", "eddard")));
+		Set<PathAndValue> all = new LinkedHashSet<PathAndValue>();
+		for(Set<PathAndValue> set : query.getCriteria().getOrSismember()){
+		    all.addAll(set);
+		}
+		assertThat(all, hasItem(new PathAndValue("age", 43)));
+		assertThat(all, hasItem(new PathAndValue("firstname", "eddard")));
 	}
 
 	@Test // DATAREDIS-533

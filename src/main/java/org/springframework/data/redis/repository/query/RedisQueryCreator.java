@@ -15,7 +15,9 @@
  */
 package org.springframework.data.redis.repository.query;
 
+import java.util.Date;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.domain.Sort;
@@ -24,7 +26,9 @@ import org.springframework.data.geo.Distance;
 import org.springframework.data.geo.Metrics;
 import org.springframework.data.geo.Point;
 import org.springframework.data.keyvalue.core.query.KeyValueQuery;
+import org.springframework.data.redis.connection.RedisZSetCommands.Range;
 import org.springframework.data.redis.repository.query.RedisOperationChain.NearPath;
+import org.springframework.data.redis.repository.query.RedisOperationChain.PathAndValue;
 import org.springframework.data.repository.query.ParameterAccessor;
 import org.springframework.data.repository.query.parser.AbstractQueryCreator;
 import org.springframework.data.repository.query.parser.Part;
@@ -63,6 +67,23 @@ public class RedisQueryCreator extends AbstractQueryCreator<KeyValueQuery<RedisO
 			case NEAR:
 				sink.near(getNearPath(part, iterator));
 				break;
+			case GREATER_THAN:
+//			    sink.ranges(part.getProperty().toDotPath(), new Range().gt(getComparableValue(iterator.next())));
+			    sink.sismember(part.getProperty().toDotPath(), new Range().gt(getComparableValue(iterator.next())));
+			    break;
+			case GREATER_THAN_EQUAL:
+//                sink.ranges(part.getProperty().toDotPath(), new Range().gte(getComparableValue(iterator.next())));
+			    sink.sismember(part.getProperty().toDotPath(), new Range().gte(getComparableValue(iterator.next())));
+                break;
+			case LESS_THAN:
+			    sink.sismember(part.getProperty().toDotPath(), new Range().lt(getComparableValue(iterator.next())));
+                break;
+			case LESS_THAN_EQUAL:
+			    sink.sismember(part.getProperty().toDotPath(), new Range().lte(getComparableValue(iterator.next())));
+                break;
+			case BETWEEN:
+			    sink.sismember(part.getProperty().toDotPath(), new Range().gte(getComparableValue(iterator.next())).lte(getComparableValue(iterator.next())));
+                break;
 			default:
 				throw new IllegalArgumentException(part.getType() + "is not supported for redis query derivation");
 		}
@@ -70,7 +91,17 @@ public class RedisQueryCreator extends AbstractQueryCreator<KeyValueQuery<RedisO
 		return sink;
 	}
 
-	/*
+	private Object getComparableValue(Object obj) {
+        if(obj instanceof Date){
+            return ((Date) obj).getTime();
+        }
+        if(obj instanceof Integer || obj instanceof Long || obj instanceof Double){
+            return obj;
+        }
+        return null;
+    }
+
+    /*
 	 * (non-Javadoc)
 	 * @see org.springframework.data.repository.query.parser.AbstractQueryCreator#and(org.springframework.data.repository.query.parser.Part, java.lang.Object, java.util.Iterator)
 	 */
@@ -101,8 +132,9 @@ public class RedisQueryCreator extends AbstractQueryCreator<KeyValueQuery<RedisO
 		if (query.getCriteria() != null && !CollectionUtils.isEmpty(query.getCriteria().getSismember())
 				&& !CollectionUtils.isEmpty(query.getCriteria().getOrSismember()))
 			if (query.getCriteria().getSismember().size() == 1 && query.getCriteria().getOrSismember().size() == 1) {
-
-				query.getCriteria().getOrSismember().add(query.getCriteria().getSismember().iterator().next());
+			    LinkedHashSet<PathAndValue> linkedHashSet = new LinkedHashSet<PathAndValue>();
+			    linkedHashSet.add(query.getCriteria().getSismember().iterator().next());
+				query.getCriteria().getOrSismember().add(linkedHashSet);
 				query.getCriteria().getSismember().clear();
 			}
 

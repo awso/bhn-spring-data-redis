@@ -5,7 +5,7 @@
 
 	<groupId>org.springframework.data</groupId>
 	<artifactId>spring-data-redis</artifactId>
-	<version>1.8.8.RELEASE</version>
+	<version>1.8.8.1-SNAPSHOT</version>
 
 	<name>Spring Data Redis</name>
 
@@ -27,6 +27,7 @@
 		<srp>0.7</srp>
 		<jredis>06052013</jredis>
 		<multithreadedtc>1.01</multithreadedtc>
+		<source.level>1.8</source.level>
 	</properties>
 
 	<dependencyManagement>
@@ -254,6 +255,35 @@
 			</plugin>
 
 		</plugins>
+  <pluginManagement>
+  <plugins>
+    <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+    <plugin>
+      <groupId>org.eclipse.m2e</groupId>
+      <artifactId>lifecycle-mapping</artifactId>
+      <version>1.0.0</version>
+      <configuration>
+        <lifecycleMappingMetadata>
+          <pluginExecutions>
+            <pluginExecution>
+              <pluginExecutionFilter>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <versionRange>[1.5.0,)</versionRange>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+              </pluginExecutionFilter>
+              <action>
+                <ignore></ignore>
+              </action>
+            </pluginExecution>
+          </pluginExecutions>
+        </lifecycleMappingMetadata>
+      </configuration>
+    </plugin>
+  </plugins>
+</pluginManagement>
 	</build>
 
 	<profiles>
@@ -286,4 +316,27 @@
 			<url>https://repo.spring.io/plugins-release</url>
 		</pluginRepository>
 	</pluginRepositories>
+ 
+   <distributionManagement>
+    <repository>
+      <id>central</id>
+      <name>Blackhawk Central Releases Repo</name>
+      <url>https://artifacts.blackhawknetwork.com/artifactory/ext-release-local</url>
+    </repository>
+    <snapshotRepository>
+      <id>snapshots</id>
+      <name>Blackhawk Central Snapshots Repo</name>
+      <url>https://artifacts.blackhawknetwork.com/artifactory/ext-snapshot-local</url>
+    </snapshotRepository>
+    <site>
+      <id>bhn-sites</id>
+      <url>file:/var/www/org/springframework/data/spring-data-redis</url>
+    </site>
+  </distributionManagement>
+
+    <scm>
+        <connection>scm:git:ssh://git@git.blackhawknetwork.com:7999/sa/spring-data-redis.git</connection>
+        <developerConnection>scm:git:ssh://git@git.blackhawknetwork.com:7999/sa/spring-data-redis.git</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
 </project>
